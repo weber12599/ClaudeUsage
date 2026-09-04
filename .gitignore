@@ -1,0 +1,12 @@
+# build artifacts
+/build/
+/dist/
+*.egg-info/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+
+# macOS
+.DS_Store

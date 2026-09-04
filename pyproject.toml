@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-usage-menubar"
+version = "0.1.0"
+description = "macOS menubar tool: watch Claude usage across multiple CLAUDE_CONFIG_DIR accounts"
+requires-python = ">=3.10"
+# Runtime deps live under optional-dependencies so `python setup.py py2app`
+# (which chokes on a populated install_requires) still works.
+dependencies = []
+
+[project.scripts]
+claude-usage = "claude_usage.__main__:main"
+
+[project.optional-dependencies]
+gui = ["rumps>=0.4.0", "pyobjc-framework-WebKit>=10.0"]
+build = ["rumps>=0.4.0", "pyobjc-framework-WebKit>=10.0", "py2app>=0.28"]
+
+[tool.setuptools]
+packages = ["claude_usage"]
+
+[tool.setuptools.package-data]
+claude_usage = ["ui/*.html"]

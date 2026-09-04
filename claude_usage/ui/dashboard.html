@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Usage</title>
+<style>
+  :root {
+    --bg: #f5f5f4; --card: #ffffff; --ink: #1c1917; --muted: #78716c;
+    --line: #e7e5e4; --accent: #2563eb; --ok: #16a34a; --warn: #d97706;
+    --crit: #dc2626; --track: #e7e5e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1917; --card: #292524; --ink: #f5f5f4; --muted: #a8a29e;
+      --line: #44403c; --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24;
+      --crit: #f87171; --track: #44403c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    background: var(--bg); color: var(--ink);
+  }
+  header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg);
+  }
+  header h1 { font-size: 13px; font-weight: 600; margin: 0; flex: 1; }
+  header .sub { color: var(--muted); font-size: 11px; }
+  button {
+    font: inherit; padding: 4px 10px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); border-radius: 6px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.danger { color: var(--crit); }
+  main { padding: 12px 14px 24px; }
+  section { margin-bottom: 18px; }
+  section > h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 8px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .acct-head { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .acct-name { font-weight: 600; }
+  .badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted);
+  }
+  .badge.state-ok { color: var(--ok); border-color: var(--ok); }
+  .badge.state-warn { color: var(--warn); border-color: var(--warn); }
+  .badge.state-crit, .badge.state-blocked { color: var(--crit); border-color: var(--crit); }
+  .grow { flex: 1; }
+  .meters { margin-top: 8px; display: grid; grid-template-columns: 28px 1fr auto; gap: 4px 8px; align-items: center; }
+  .meters .lbl { color: var(--muted); }
+  .track { height: 6px; background: var(--track); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; background: var(--ok); border-radius: 999px; }
+  .fill.warn { background: var(--warn); } .fill.crit { background: var(--crit); }
+  .meters .val { font-variant-numeric: tabular-nums; }
+  .reset { color: var(--muted); font-size: 11px; }
+  .note { color: var(--muted); font-size: 11px; margin-top: 6px; }
+  .note.err { color: var(--crit); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0; }
+  .row label { color: var(--muted); width: 92px; flex: none; }
+  input[type=text], input[type=number] {
+    font: inherit; padding: 4px 7px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); border-radius: 6px; min-width: 0;
+  }
+  input[type=text].path { flex: 1; }
+  .swatches { display: flex; gap: 4px; }
+  .swatch { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+  .swatch.sel { border-color: var(--ink); }
+  .probe { font-size: 11px; }
+  .probe.ok { color: var(--ok); } .probe.bad { color: var(--crit); }
+  .acct-actions { display: flex; gap: 6px; margin-top: 6px; }
+  .empty { color: var(--muted); text-align: center; padding: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Claude Usage</h1>
+  <span class="sub" id="updated"></span>
+  <button id="refresh">Refresh</button>
+</header>
+<main>
+  <section id="status"><h2>Status</h2><div id="status-list"></div></section>
+  <section id="manage">
+    <h2>Accounts</h2>
+    <div id="acct-list"></div>
+    <button id="add">+ Add account</button>
+  </section>
+  <section id="globals">
+    <h2>Settings</h2>
+    <div class="card">
+      <div class="row"><label>Poll interval</label>
+        <input type="number" id="g-interval" min="30" step="30"> <span class="reset">seconds (global)</span></div>
+      <div class="row"><label>Stale after</label>
+        <input type="number" id="g-stale" min="60" step="60"> <span class="reset">seconds</span></div>
+      <div class="row"><label>Notify at</label>
+        <input type="text" id="g-thresholds" placeholder="80, 95"> <span class="reset">% thresholds</span></div>
+      <div class="acct-actions"><button class="primary" id="g-save">Save settings</button></div>
+    </div>
+  </section>
+  <section id="footer">
+    <div class="acct-actions">
+      <button id="open-config">Open config file</button>
+      <button class="danger" id="quit">Quit</button>
+    </div>
+  </section>
+</main>
+<script>
+const COLORS = ["#3b82f6","#ef4444","#22c55e","#a855f7","#f59e0b","#14b8a6"];
+const isNative = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge);
+const _pending = {}; let _seq = 0;
+function call(action, payload) {
+  return new Promise((resolve) => {
+    if (!isNative) { console.log("bridge call (no native host):", action, payload); return resolve(null); }
+    const reqId = ++_seq; _pending[reqId] = resolve;
+    window.webkit.messageHandlers.bridge.postMessage(JSON.stringify(Object.assign({action, reqId}, payload || {})));
+  });
+}
+window.__bridgeReply = (m) => { const r = _pending[m.reqId]; if (r) { delete _pending[m.reqId]; r(m.result); } };
+window.__render = (state) => { try { render(state); } catch (e) { console.error(e); } };
+
+let STATE = { config: {}, accounts: [] };
+const $ = (id) => document.getElementById(id);
+
+function rel(ts) {
+  if (!ts) return "";
+  let d = ts - Date.now() / 1000;
+  const past = d < 0; d = Math.abs(d);
+  const m = Math.round(d / 60), h = Math.floor(m / 60);
+  let s;
+  if (m < 1) s = "<1m"; else if (m < 60) s = m + "m";
+  else if (h < 48) s = h + "h " + (m % 60) + "m"; else s = Math.floor(h / 24) + "d " + (h % 24) + "h";
+  return past ? s + " ago" : "in " + s;
+}
+function meterClass(p) { return p >= 95 ? "crit" : p >= 80 ? "warn" : ""; }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function windowRow(label, w) {
+  if (!w || w.pct == null) return `<div class="lbl">${label}</div><div class="reset">—</div><div></div>`;
+  const c = meterClass(w.pct);
+  return `<div class="lbl">${label}</div>
+    <div class="track"><div class="fill ${c}" style="width:${Math.min(100, w.pct)}%"></div></div>
+    <div class="val">${w.pct.toFixed(0)}%<span class="reset"> · ${rel(w.reset)}</span></div>`;
+}
+
+function statusCard(a) {
+  const snap = a.snapshot || {};
+  const sev = a.severity || "nodata";
+  let badge = sev, cls = "state-" + (["ok","warn","crit","blocked"].includes(sev) ? sev : "");
+  if (sev === "blocked") badge = "blocked";
+  else if (sev === "expired") badge = "token expired";
+  else if (sev === "nocreds") badge = "no credentials";
+  else if (sev === "offline") badge = "offline";
+  else if (sev === "nodata") badge = "no data";
+  else badge = (a.display_pct == null ? "—" : a.display_pct.toFixed(0) + "%");
+
+  let body = "";
+  if (sev === "blocked") {
+    body = `<div class="note err">⛔ ${esc(snap.blocked_reason || "rate limit reached")} · unblocks ${rel(snap.unblock_at)}</div>`;
+  } else if (sev === "expired") {
+    body = `<div class="note err">⚠ token expired — run <code>claude</code> once on this account</div>`;
+  } else if (sev === "nocreds") {
+    body = `<div class="note err">no Keychain entry for this CLAUDE_CONFIG_DIR</div>`;
+  } else {
+    body = `<div class="meters">${windowRow("5h", snap.five_hour)}${windowRow("7d", snap.seven_day)}</div>`;
+    if (snap.overage_pct) body += `<div class="note">overage ${snap.overage_pct.toFixed(0)}%</div>`;
+  }
+  const cap = snap.fetched_at ? `<div class="note">captured ${rel(snap.fetched_at)}${a.stale ? " · stale" : ""}</div>` : "";
+  return `<div class="card">
+    <div class="acct-head">
+      <span class="dot" style="background:${esc(a.color)}"></span>
+      <span class="acct-name">${esc(a.name)}</span>
+      ${a.subscription || (snap && snap.subscription) ? `<span class="badge">${esc(a.subscription || snap.subscription)}</span>` : ""}
+      ${a.enabled ? "" : `<span class="badge">disabled</span>`}
+      <span class="grow"></span>
+      <span class="badge ${cls}">${esc(badge)}</span>
+    </div>${body}${cap}
+  </div>`;
+}
+
+function acctEditor(a) {
+  const d = document.createElement("div");
+  d.className = "card";
+  const iv = a.poll_interval_seconds == null ? "" : a.poll_interval_seconds;
+  d.innerHTML = `
+    <div class="row"><label>Name</label><input type="text" data-f="name" value="${esc(a.name)}"></div>
+    <div class="row"><label>Config dir</label>
+      <input type="text" class="path" data-f="config_dir" value="${esc(a.config_dir)}">
+      <button data-act="choose">Choose…</button></div>
+    <div class="row"><label></label><span class="probe" data-probe>checking…</span></div>
+    <div class="row"><label>Short</label><input type="text" data-f="short" value="${esc(a.short)}" style="width:56px">
+      <label style="width:auto">Color</label><span class="swatches">
+        ${COLORS.map(c => `<span class="swatch ${c === a.color ? "sel" : ""}" data-color="${c}" style="background:${c}"></span>`).join("")}
+      </span></div>
+    <div class="row"><label>Enabled</label><input type="checkbox" data-f="enabled" ${a.enabled ? "checked" : ""}>
+      <label style="width:auto">Interval</label>
+      <input type="number" data-f="poll_interval_seconds" value="${iv}" placeholder="global" min="30" step="30" style="width:90px">
+      <span class="reset">sec</span></div>
+    <div class="acct-actions">
+      <button class="primary" data-act="save">Save</button>
+      <button class="danger" data-act="remove">Remove</button>
+    </div>`;
+  const get = () => {
+    const o = { id: a.id };
+    d.querySelectorAll("[data-f]").forEach(el => {
+      const f = el.dataset.f;
+      o[f] = el.type === "checkbox" ? el.checked
+           : f === "poll_interval_seconds" ? (el.value ? +el.value : null)
+           : el.value;
+    });
+    o.color = d.querySelector(".swatch.sel") ? d.querySelector(".swatch.sel").dataset.color : a.color;
+    return o;
+  };
+  const doProbe = () => {
+    const dir = d.querySelector('[data-f="config_dir"]').value;
+    const el = d.querySelector("[data-probe]");
+    el.textContent = "checking…"; el.className = "probe";
+    call("probeDir", { config_dir: dir }).then(r => {
+      if (!r) return;
+      if (r.found) { el.textContent = "✓ credentials found" + (r.subscription ? " · " + r.subscription : "") + (r.expired ? " (expired)" : ""); el.className = "probe ok"; }
+      else { el.textContent = "✗ no credentials" + (r.dir_exists ? "" : " · dir not found"); el.className = "probe bad"; }
+    });
+  };
+  d.querySelector('[data-f="config_dir"]').addEventListener("change", doProbe);
+  d.querySelectorAll(".swatch").forEach(s => s.addEventListener("click", () => {
+    d.querySelectorAll(".swatch").forEach(x => x.classList.remove("sel"));
+    s.classList.add("sel");
+  }));
+  d.querySelector('[data-act="choose"]').addEventListener("click", () => {
+    call("pickDir").then(r => { if (r && r.path) { d.querySelector('[data-f="config_dir"]').value = r.path; doProbe(); } });
+  });
+  d.querySelector('[data-act="save"]').addEventListener("click", () => {
+    call(a.id.startsWith("__new") ? "addAccount" : "updateAccount", get()).then(window.__render);
+  });
+  d.querySelector('[data-act="remove"]').addEventListener("click", () => {
+    if (a.id.startsWith("__new")) { d.remove(); return; }
+    call("removeAccount", { id: a.id }).then(window.__render);
+  });
+  setTimeout(doProbe, 0);
+  return d;
+}
+
+function render(state) {
+  STATE = state || STATE;
+  $("updated").textContent = STATE.generated_at ? "updated " + rel(STATE.generated_at) : "";
+  $("status-list").innerHTML = STATE.accounts.length
+    ? STATE.accounts.map(statusCard).join("")
+    : `<div class="empty">No accounts yet — add one below.</div>`;
+  const list = $("acct-list"); list.innerHTML = "";
+  STATE.accounts.forEach(a => list.appendChild(acctEditor(a)));
+  const c = STATE.config || {};
+  $("g-interval").value = c.poll_interval_seconds || 300;
+  $("g-stale").value = c.stale_after_seconds || 1800;
+  $("g-thresholds").value = (c.notify_thresholds || [80, 95]).join(", ");
+}
+
+$("refresh").addEventListener("click", () => { $("refresh").textContent = "…"; call("refreshNow").then(s => { $("refresh").textContent = "Refresh"; window.__render(s); }); });
+$("add").addEventListener("click", () => {
+  $("acct-list").appendChild(acctEditor({
+    id: "__new" + (++_seq), name: "New account", short: "N", config_dir: "~/.claude",
+    enabled: true, color: COLORS[STATE.accounts.length % COLORS.length], poll_interval_seconds: null
+  }));
+});
+$("g-save").addEventListener("click", () => {
+  call("saveGlobal", {
+    poll_interval_seconds: +$("g-interval").value || null,
+    stale_after_seconds: +$("g-stale").value || null,
+    notify_thresholds: $("g-thresholds").value.split(",").map(s => parseInt(s.trim(), 10)).filter(n => n > 0)
+  }).then(window.__render);
+});
+
+$("open-config").addEventListener("click", () => call("openConfigFile"));
+$("quit").addEventListener("click", () => call("quit"));
+
+call("ready").then(s => { if (s) window.__render(s); });
+</script>
+</body>
+</html>
