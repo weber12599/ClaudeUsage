@@ -53,11 +53,34 @@ First run pops a Keychain prompt per account — choose **Always Allow**.
 ./build.sh                                  # -> dist/ClaudeUsage.app  (~36 MB)
 ```
 
-Then:
+Then install it and set it to start at login:
 
-1. `mv dist/ClaudeUsage.app /Applications/`
-2. Double-click it once; approve the Keychain prompts.
-3. Auto-start: System Settings → General → Login Items → **+** → `ClaudeUsage.app`.
+```sh
+./install.sh          # copies to /Applications, registers a hidden login item, launches it
+```
+
+(approve the one-time "control System Events" prompt, then the per-account
+Keychain prompts). Equivalent manual steps: `mv dist/ClaudeUsage.app
+/Applications/`, then System Settings → General → Login Items → **+** →
+`ClaudeUsage.app`.
+
+To auto-restart on crash instead, use a LaunchAgent:
+
+```sh
+mkdir -p ~/Library/LaunchAgents
+cat > ~/Library/LaunchAgents/local.claude-usage.menubar.plist <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>local.claude-usage.menubar</string>
+  <key>ProgramArguments</key>
+  <array><string>/Applications/ClaudeUsage.app/Contents/MacOS/ClaudeUsage</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+PLIST
+launchctl load ~/Library/LaunchAgents/local.claude-usage.menubar.plist
+```
 
 `LSUIElement` is set — no Dock icon, no app menu; the menubar item is the whole
 app. The bundle is ad-hoc signed; if Gatekeeper blocks it, right-click → Open
