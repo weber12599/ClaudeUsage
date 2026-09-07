@@ -9,8 +9,8 @@ Needs `rumps` + `pyobjc-framework-WebKit`. Run from a real login GUI session.
 
 from __future__ import annotations
 
-import subprocess
 import queue as _queue
+import subprocess
 import threading
 from typing import Callable, Dict
 

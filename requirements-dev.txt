@@ -1,0 +1,7 @@
+# Dev / CI / build dependencies. Runtime deps are intentionally empty in
+# pyproject.toml (py2app chokes on a populated install_requires).
+rumps>=0.4.0
+pyobjc-framework-WebKit>=10.0
+py2app>=0.28
+ruff>=0.6
+pytest>=8

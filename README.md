@@ -1,5 +1,7 @@
 # Claude Usage — menubar tool
 
+[![CI](https://github.com/weber12599/ClaudeUsage/actions/workflows/ci.yml/badge.svg)](https://github.com/weber12599/ClaudeUsage/actions/workflows/ci.yml)
+
 A macOS menubar tool that watches Claude usage across **multiple accounts**, one
 per `CLAUDE_CONFIG_DIR`. The menubar shows each account's usage; left-click drops
 down a dashboard with a table and an editor for adding/removing accounts.
@@ -39,7 +41,7 @@ See [`docs/design.md`](docs/design.md) for the reverse-engineered API details an
   ```sh
   brew install python@3.13
   /opt/homebrew/bin/python3.13 -m venv .venv
-  .venv/bin/pip install rumps "pyobjc-framework-WebKit>=10.0"
+  .venv/bin/pip install -r requirements-dev.txt   # rumps, pyobjc, py2app, ruff, pytest
   ```
 
 ## Run (dev)
@@ -47,6 +49,7 @@ See [`docs/design.md`](docs/design.md) for the reverse-engineered API details an
 ```sh
 .venv/bin/python -m claude_usage            # the menubar app
 .venv/bin/python -m claude_usage --once     # poll each account once, print JSON, exit
+.venv/bin/python -m claude_usage --version  # print the version and exit
 ```
 
 First run pops a Keychain prompt per account — choose **Always Allow**.
@@ -103,6 +106,31 @@ launchctl load ~/Library/LaunchAgents/local.claude-usage.menubar.plist
 app. The bundle is ad-hoc signed; if Gatekeeper blocks it, right-click → Open
 once (or `xattr -dr com.apple.quarantine /Applications/ClaudeUsage.app`).
 
+## Versioning & releases
+
+`claude_usage/__init__.py`'s `__version__` is the **single source of truth**.
+`pyproject.toml` reads it (`[tool.setuptools.dynamic]`), `setup.py` stamps it
+into the `.app` plist (`CFBundleShortVersionString` / `CFBundleVersion`), and
+`python -m claude_usage --version` prints it.
+
+**CI** (`.github/workflows/ci.yml`, on every push to `main` and every PR, on
+`macos-latest`): `ruff check`, byte-compile, a `--version` ↔ package check, and
+`pytest` (network-free tests for the Keychain service-name derivation, the
+ratelimit-header parsing, and config round-tripping — `tests/test_basic.py`).
+
+**Release** (`.github/workflows/release.yml`, on pushing a `v*` tag):
+
+```sh
+./release.sh 0.2.0                       # bumps __version__, commits, tags v0.2.0
+git push origin main && git push origin v0.2.0
+```
+
+The workflow re-checks the tag matches `__version__`, runs lint + tests, builds
+`dist/ClaudeUsage.app` (`PY=python ./build.sh`), zips it with `ditto` as
+`ClaudeUsage-v0.2.0.zip`, and creates a GitHub Release (auto-generated notes)
+with the zip attached. Users then download, unzip into `/Applications`, and run
+`./install.sh /Applications/ClaudeUsage.app` (or the manual Login Items step).
+
 ## UI
 
 | gesture | result |
@@ -141,7 +169,7 @@ one system notification; a blocked account fires one too.
 claude_usage/
   __main__.py     entry point ( --once | menubar app )
   config.py       config.json load/save, Account model, defaults
-  credentials.py  Keychain read + sha256 service-name derivation
+  credentials.py  Keychain read + sha256 service-name derivation + `claude` token refresh
   poller.py       the API call + header parsing -> Snapshot
   scheduler.py    background poll loop, per-account intervals
   state.py        view model: menubar title, dashboard payload, severity
@@ -149,9 +177,15 @@ claude_usage/
   window.py       NSPopover + WKWebView dashboard, JSON bridge, NSOpenPanel
   ui/dashboard.html   status table + account editor (no framework)
 app_main.py       top-level launcher for py2app
-setup.py          py2app config (LSUIElement, bundles ui/)
-build.sh          one-shot standalone build
+setup.py          py2app config when called with `py2app`, else defers to pyproject.toml
+pyproject.toml    metadata; version read from claude_usage.__version__; ruff/pytest config
+build.sh          one-shot standalone build (honours PY=... for CI)
+install.sh        install / reinstall into /Applications + hidden login item
+release.sh        bump __version__, commit, tag vX.Y.Z
+requirements-dev.txt   rumps, pyobjc, py2app, ruff, pytest
 verify.sh         standalone shell check of the whole credential->API->headers path
+tests/            network-free tests (service-name, header parsing, config)
+.github/workflows/    ci.yml (lint + tests), release.yml (tag -> build -> GitHub Release)
 docs/design.md    design notes + reverse-engineered API reference
 ```
 

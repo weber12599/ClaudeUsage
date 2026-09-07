@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-usage-menubar"
-version = "0.1.0"
+dynamic = ["version"]                 # single source of truth: claude_usage/__init__.py
 description = "macOS menubar tool: watch Claude usage across multiple CLAUDE_CONFIG_DIR accounts"
 requires-python = ">=3.10"
 # Runtime deps live under optional-dependencies so `python setup.py py2app`
@@ -17,9 +17,27 @@ claude-usage = "claude_usage.__main__:main"
 [project.optional-dependencies]
 gui = ["rumps>=0.4.0", "pyobjc-framework-WebKit>=10.0"]
 build = ["rumps>=0.4.0", "pyobjc-framework-WebKit>=10.0", "py2app>=0.28"]
+dev = ["rumps>=0.4.0", "pyobjc-framework-WebKit>=10.0", "ruff>=0.6", "pytest>=8"]
 
 [tool.setuptools]
 packages = ["claude_usage"]
 
+[tool.setuptools.dynamic]
+version = {attr = "claude_usage.__version__"}
+
 [tool.setuptools.package-data]
 claude_usage = ["ui/*.html"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+# Keep it lean: real bugs + import hygiene + the blind-except rule the code
+# already annotates (# noqa: BLE001). No pyupgrade — the codebase deliberately
+# uses `from __future__ import annotations` with typing.Optional/List.
+select = ["E", "F", "I", "BLE"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

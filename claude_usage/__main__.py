@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 
-from . import config
+from . import __version__, config
 from .poller import poll_account
 
 
@@ -41,6 +41,8 @@ def _run_app(cfg: config.Config) -> int:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="claude-usage")
+    parser.add_argument("--version", action="version",
+                        version=f"%(prog)s {__version__}")
     parser.add_argument("--once", action="store_true",
                         help="poll each enabled account once, print JSON, exit")
     parser.add_argument("--config", metavar="PATH", default=None,
