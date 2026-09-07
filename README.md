@@ -19,9 +19,13 @@ For each enabled account the tool:
 3. parses the `anthropic-ratelimit-unified-*` response headers — 5h / 7d
    utilisation and reset times, or the `rejected` / overage state when blocked.
 
-There is **no token refresh**: an account whose stored token has expired shows
-`⚠` until you run `claude` on it yourself. Cost is ~1 token per healthy account
-per poll (default every 5 min).
+An account whose stored token has expired shows `⚠`. The dashboard's status card
+then offers a **Refresh token** button: it runs a tiny `claude -p` query with
+that account's `CLAUDE_CONFIG_DIR`, which makes Claude Code mint a fresh OAuth
+token from the refresh token and write it back to the Keychain (result comes
+back as a notification). If the refresh token is also dead you still have to
+`claude auth login` on the account yourself. Cost is ~1 token per healthy
+account per poll (default every 5 min), plus ~1 per manual token refresh.
 
 See [`docs/design.md`](docs/design.md) for the reverse-engineered API details and
 [`verify.sh`](verify.sh) for a standalone end-to-end check.
@@ -63,6 +67,19 @@ Then install it and set it to start at login:
 Keychain prompts). Equivalent manual steps: `mv dist/ClaudeUsage.app
 /Applications/`, then System Settings → General → Login Items → **+** →
 `ClaudeUsage.app`.
+
+### Update / reinstall
+
+```sh
+./build.sh && ./install.sh
+```
+
+`install.sh` is re-runnable: it quits any running instance (`osascript … quit`,
+then `killall`), removes and re-copies `/Applications/ClaudeUsage.app`, and
+re-registers the login item, then relaunches. No need to touch Login Items
+again. If you skip `install.sh` and just replace the bundle by hand, quit the
+menubar item first (right-click → Quit) — `open` on an already-running app only
+brings the old process forward.
 
 To auto-restart on crash instead, use a LaunchAgent:
 

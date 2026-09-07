@@ -5,6 +5,8 @@
 #   ./install.sh                       # uses dist/ClaudeUsage.app (run ./build.sh first)
 #   ./install.sh /path/to/ClaudeUsage.app
 #
+# Re-runnable: it quits any running instance, replaces /Applications/ClaudeUsage.app,
+# and re-registers the login item — so `./build.sh && ./install.sh` also upgrades.
 # The first run triggers a one-time "control System Events" permission prompt.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -16,6 +18,10 @@ if [ ! -d "$SRC" ]; then
   echo "not found: $SRC  — run ./build.sh first" >&2
   exit 1
 fi
+
+# stop any running instance so a reinstall actually swaps in the new build
+osascript -e 'tell application "ClaudeUsage" to quit' >/dev/null 2>&1 || true
+killall ClaudeUsage >/dev/null 2>&1 || true
 
 if [ "$(cd "$SRC" && pwd)" != "$DEST" ]; then
   rm -rf "$DEST"

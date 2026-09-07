@@ -66,6 +66,8 @@
   .reset { color: var(--muted); font-size: 11px; }
   .note { color: var(--muted); font-size: 11px; margin-top: 6px; }
   .note.err { color: var(--crit); }
+  .note button { padding: 1px 7px; font-size: 11px; margin: 0 2px; vertical-align: baseline; }
+  .note button[disabled] { opacity: .6; cursor: default; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0; }
   .row label { color: var(--muted); width: 92px; flex: none; }
   input[type=text], input[type=number] {
@@ -167,7 +169,9 @@ function statusCard(a) {
   if (sev === "blocked") {
     body = `<div class="note err">⛔ ${esc(snap.blocked_reason || "rate limit reached")} · unblocks ${rel(snap.unblock_at)}</div>`;
   } else if (sev === "expired") {
-    body = `<div class="note err">⚠ token expired — run <code>claude</code> once on this account</div>`;
+    body = `<div class="note err">⚠ token expired —
+      <button data-act="refresh-token" data-id="${esc(a.id)}">Refresh token</button>
+      or run <code>claude</code> once on this account</div>`;
   } else if (sev === "nocreds") {
     body = `<div class="note err">no Keychain entry for this CLAUDE_CONFIG_DIR</div>`;
   } else {
@@ -264,6 +268,13 @@ function render(state) {
 }
 
 $("refresh").addEventListener("click", () => { $("refresh").textContent = "…"; call("refreshNow").then(s => { $("refresh").textContent = "Refresh"; window.__render(s); }); });
+$("status-list").addEventListener("click", (e) => {
+  const btn = e.target.closest('[data-act="refresh-token"]');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true; btn.textContent = "refreshing…";
+  call("refreshToken", { id: btn.dataset.id });
+  // result surfaces via a system notification + the next status re-render
+});
 $("add").addEventListener("click", () => {
   $("acct-list").appendChild(acctEditor({
     id: "__new" + (++_seq), name: "New account", short: "N", config_dir: "~/.claude",

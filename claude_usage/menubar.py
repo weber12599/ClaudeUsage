@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import subprocess
 import queue as _queue
+import threading
 from typing import Callable, Dict
 
 import objc
@@ -76,6 +77,7 @@ class ClaudeUsageApp(rumps.App):
         self.scheduler = scheduler
         self.registry = registry
         self._dash = None                      # DashboardController (lazy)
+        self._notices: "_queue.Queue[tuple[str, str, str]]" = _queue.Queue()
         self._proxy = _StatusClickProxy.alloc().initWithApp_(self)
 
         self._timer = rumps.Timer(self._drain, 1)
@@ -141,6 +143,13 @@ class ClaudeUsageApp(rumps.App):
 
     # -- main-loop pump ---------------------------------------------
     def _drain(self, _):
+        while True:                             # notices posted from worker threads
+            try:
+                title, subtitle, message = self._notices.get_nowait()
+            except _queue.Empty:
+                break
+            _notify(title, subtitle, message)
+
         changed = False
         while True:
             try:
@@ -185,6 +194,7 @@ class ClaudeUsageApp(rumps.App):
             "ready": lambda _p: self.registry.dashboard_payload(),
             "refreshNow": lambda _p: (self.scheduler.refresh_now(),
                                       self.registry.dashboard_payload())[1],
+            "refreshToken": self._h_refresh_token,
             "addAccount": self._h_add_account,
             "updateAccount": self._h_update_account,
             "removeAccount": self._h_remove_account,
@@ -200,6 +210,29 @@ class ClaudeUsageApp(rumps.App):
         self.registry.reconcile(self.cfg)
         self.title = self.registry.title()
         return self.registry.dashboard_payload()
+
+    @objc.python_method
+    def _h_refresh_token(self, payload: dict) -> dict:
+        acc = self.cfg.account(payload.get("id", ""))
+        if not acc:
+            return {"error": "unknown account"}
+        threading.Thread(target=self._do_refresh_token, args=(acc,),
+                         name="claude-usage-token-refresh", daemon=True).start()
+        return {"started": True}
+
+    @objc.python_method
+    def _do_refresh_token(self, account: Account):
+        from . import credentials
+        try:
+            res = credentials.refresh(account.config_dir)
+        except Exception as exc:  # noqa: BLE001 - a worker crash must not be silent
+            res = {"ok": False, "message": str(exc)}
+        if res.get("ok"):
+            self._notices.put(("Claude usage", account.name, "Access token refreshed"))
+        else:
+            self._notices.put(("Claude usage", account.name,
+                               f"Token refresh failed — {res.get('message', 'unknown error')}"))
+        self.scheduler.refresh_now()
 
     @objc.python_method
     def _h_add_account(self, payload: dict) -> dict:
