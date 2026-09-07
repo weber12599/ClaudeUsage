@@ -28,16 +28,21 @@ import pathlib, re, sys
 version = sys.argv[1]
 path = pathlib.Path("claude_usage/__init__.py")
 text = path.read_text(encoding="utf-8")
-new = re.sub(r'__version__ = "[^"]+"', f'__version__ = "{version}"', text, count=1)
-if new == text:
+new, n = re.subn(r'__version__ = "[^"]+"', f'__version__ = "{version}"', text, count=1)
+if n == 0:
     sys.exit("could not find __version__ in claude_usage/__init__.py")
-path.write_text(new, encoding="utf-8")
+if new != text:
+    path.write_text(new, encoding="utf-8")
 PY
 
-git add claude_usage/__init__.py
-git commit -m "Release $TAG"
+if git diff --quiet -- claude_usage/__init__.py; then
+  echo "version already $VERSION — tagging current HEAD"
+else
+  git add claude_usage/__init__.py
+  git commit -m "Release $TAG"
+fi
 git tag -a "$TAG" -m "$TAG"
 
 echo
-echo "committed and tagged $TAG. push to trigger the release build:"
+echo "tagged $TAG. push to trigger the release build:"
 echo "  git push origin main && git push origin $TAG"
