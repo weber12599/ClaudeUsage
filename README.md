@@ -110,8 +110,9 @@ once (or `xattr -dr com.apple.quarantine /Applications/ClaudeUsage.app`).
 
 `claude_usage/__init__.py`'s `__version__` is the **single source of truth**.
 `pyproject.toml` reads it (`[tool.setuptools.dynamic]`), `setup.py` stamps it
-into the `.app` plist (`CFBundleShortVersionString` / `CFBundleVersion`), and
-`python -m claude_usage --version` prints it.
+into the `.app` plist (`CFBundleShortVersionString` / `CFBundleVersion`). It's
+shown by `python -m claude_usage --version`, in the startup log line, and in the
+dashboard popover's bottom-right corner (`v0.1.0`).
 
 **CI** (`.github/workflows/ci.yml`, on every push to `main` and every PR, on
 `macos-latest`): `ruff check`, byte-compile, a `--version` ↔ package check, and

@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from . import __version__
 from .config import Account, Config
 from .poller import Snapshot
 
@@ -118,6 +119,7 @@ class Registry:
 
     def dashboard_payload(self) -> dict:
         return {
+            "version": __version__,
             "config": {
                 "poll_interval_seconds": self.cfg.poll_interval_seconds,
                 "stale_after_seconds": self.cfg.stale_after_seconds,

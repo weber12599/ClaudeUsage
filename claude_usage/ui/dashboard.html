@@ -80,7 +80,7 @@
   .swatch.sel { border-color: var(--ink); }
   .probe { font-size: 11px; }
   .probe.ok { color: var(--ok); } .probe.bad { color: var(--crit); }
-  .acct-actions { display: flex; gap: 6px; margin-top: 6px; }
+  .acct-actions { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
   .empty { color: var(--muted); text-align: center; padding: 24px; }
 </style>
 </head>
@@ -113,6 +113,8 @@
     <div class="acct-actions">
       <button id="open-config">Open config file</button>
       <button class="danger" id="quit">Quit</button>
+      <span class="grow"></span>
+      <span class="reset" id="version"></span>
     </div>
   </section>
 </main>
@@ -265,6 +267,7 @@ function render(state) {
   $("g-interval").value = c.poll_interval_seconds || 300;
   $("g-stale").value = c.stale_after_seconds || 1800;
   $("g-thresholds").value = (c.notify_thresholds || [80, 95]).join(", ");
+  $("version").textContent = STATE.version ? "v" + STATE.version : "";
 }
 
 $("refresh").addEventListener("click", () => { $("refresh").textContent = "…"; call("refreshNow").then(s => { $("refresh").textContent = "Refresh"; window.__render(s); }); });

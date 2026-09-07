@@ -27,6 +27,7 @@ from AppKit import (
 )
 from Foundation import NSObject
 
+from . import __version__
 from . import config as config_mod
 from .config import Account, Config
 from .scheduler import Scheduler
@@ -293,7 +294,8 @@ def run(cfg: Config) -> int:
     scheduler = Scheduler(cfg)
     registry = Registry(cfg)
     scheduler.start()
-    print(f"claude-usage: menubar app started, watching {len(cfg.accounts)} account(s). "
+    print(f"claude-usage v{__version__}: menubar app started, watching "
+          f"{len(cfg.accounts)} account(s). "
           "Left-click the menubar item for the dashboard; right-click for Quit.")
     ClaudeUsageApp(cfg, scheduler, registry).run()
     return 0

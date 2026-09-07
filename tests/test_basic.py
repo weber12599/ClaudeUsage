@@ -82,6 +82,11 @@ def test_config_roundtrip():
     assert again.poll_interval_seconds == cfg.poll_interval_seconds
 
 
+def test_dashboard_payload_carries_version():
+    payload = Registry(default_config()).dashboard_payload()
+    assert payload["version"] == claude_usage.__version__
+
+
 def test_severity_and_menubar_fragment_for_expired():
     cfg = default_config()
     reg = Registry(cfg)
