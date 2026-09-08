@@ -34,6 +34,23 @@ def display_pct(snap: Optional[Snapshot]) -> Optional[float]:
     return max(vals) if vals else None
 
 
+def menubar_pct(snap: Optional[Snapshot]) -> Optional[float]:
+    """Number shown on the menubar: the 5-hour window only (no fallback to 7d)."""
+    if snap is None or snap.five_hour is None:
+        return None
+    return snap.five_hour.pct
+
+
+def pct_bucket(pct: Optional[float]) -> str:
+    if pct is None:
+        return "nodata"
+    if pct >= 95:
+        return "crit"
+    if pct >= 80:
+        return "warn"
+    return "ok"
+
+
 def is_stale(snap: Optional[Snapshot], cfg: Config) -> bool:
     if not snap or not snap.fetched_at:
         return False
@@ -52,14 +69,7 @@ def severity(state: AccountState, cfg: Config) -> str:
         return "expired"
     if snap.state in ("offline",) or snap.state.startswith("http_"):
         return "offline"
-    pct = display_pct(state.display_snapshot())
-    if pct is None:
-        return "nodata"
-    if pct >= 95:
-        return "crit"
-    if pct >= 80:
-        return "warn"
-    return "ok"
+    return pct_bucket(display_pct(state.display_snapshot()))
 
 
 _PREFIX = {"ok": "", "warn": "\U0001F7E0 ", "crit": "\U0001F534 "}  # green/orange/red dots
@@ -75,13 +85,14 @@ def menubar_fragment(state: AccountState, cfg: Config) -> str:
     if sev == "nocreds":
         return f"{short} —"          # em dash
     if sev in ("offline", "nodata"):
-        pct = display_pct(state.display_snapshot())
+        pct = menubar_pct(state.display_snapshot())
         return f"{short} ~{pct:.0f}%" if pct is not None else f"{short} ~"
-    pct = display_pct(state.display_snapshot())
+    pct = menubar_pct(state.display_snapshot())
     if pct is None:
         return f"{short} —"
     stale = "~" if is_stale(state.snapshot, cfg) else ""
-    return f"{_PREFIX.get(sev, '')}{short} {stale}{pct:.0f}%"
+    prefix = _PREFIX.get(pct_bucket(pct), "")
+    return f"{prefix}{short} {stale}{pct:.0f}%"
 
 
 class Registry:
