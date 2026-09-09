@@ -12,7 +12,7 @@
 |---|---|
 | 用量來源 | `POST /v1/messages` 1-token 呼叫 → 解析 `anthropic-ratelimit-unified-*` response header |
 | 外殼 | Python + [rumps](https://github.com/jaredks/rumps) menubar app |
-| Token 過期(401) | **只讀不寫**,不做 refresh。該帳號顯示上次快取值 + `⚠ 需重新登入`,等使用者自己跑一次那個帳號的 `claude`,Claude Code 會更新 Keychain |
+| Token 過期(401) | 背景緒**自動試一次** `credentials.refresh()`(跑一個小小的 `claude -p` 讓 Claude Code 用 refresh token 換新的 access token 寫回 Keychain),成功就馬上重打一輪。失敗會退避 `_REFRESH_RETRY_COOLDOWN`(15 分鐘)再試,期間該帳號顯示上次快取值 + `⚠ 需重新登入`。手動的「Refresh token」按鈕仍在。原始設計是「只讀不寫」,見 §9 |
 | 輪詢間隔 | 預設 5 分鐘,可設定 |
 
 ---
@@ -245,7 +245,7 @@ def _pct(v):
 |---|---|---|
 | 200 `allowed` | `ok` | 寫 cache、正常顯示 5h / 7d % |
 | 429 `rejected`(overage / spend cap) | `blocked` | 顯示 `🔴 封鎖`,tooltip 帶 `blocked_reason`,下拉顯示 `unblock_at` 倒數;仍寫 cache |
-| token 已過期(打之前 `now >= expires_at` 就判定) | `expired` | 顯示 cache 舊值 + `⚠`,下拉提示「開一次該帳號的 claude」 |
+| token 已過期(打之前 `now >= expires_at` 就判定) | `expired` | 背景緒先自動試一次 token refresh;成功就重打一輪,失敗才顯示 cache 舊值 + `⚠`(15 分鐘內不再重試) |
 | 401 | `expired` | 同上 |
 | 連線失敗 / timeout | `offline` | 顯示 cache 舊值 + `~` |
 | 其他 HTTP | `http_<code>` | 顯示 cache 舊值 + `~`,下拉顯示 code |
@@ -341,7 +341,7 @@ Quit
 
 - OAuth token 儲存格式 / Keychain service 命名 / header 名稱都非官方穩定介面,可能隨版本變 → 解析層容錯(缺欄位 `None`)、`credentials.py` 保留 fallback
 - **header 集合會依帳號狀態變** —— 健康帳號有 `5h-*`/`7d-*`,rejected 帳號只有 `overage-*`。不能假設任何欄位一定存在
-- **work 這種不常開的帳號,token 會過期**,在你下次手動跑該帳號 `claude` 前只能顯示舊值 —— 這是「只讀不寫」的已知取捨
+- **work 這種不常開的帳號,token 會過期**;現在背景緒會自動試一次 refresh(跑一個 `claude -p`),refresh token 本身還有效就能救回來。refresh token 也失效時才會卡在舊值,等使用者跑 `claude auth login`
 - work 帳號目前實測是 `org_spend_cap_reached`(Console org 每月支出上限),鎖到 2026-10-01;這也代表 work 的 Claude Code 現在應該也在被擋
 - spoof system prompt 是必要條件;哪天 Anthropic 收緊 OAuth token 用途檢查,這條路可能整個失效
 - 純本機、5 分鐘一次、每次約 1 token(見 `menubar-plan` 討論),成本與觸發異常存取判定的風險都可忽略;不要把間隔調到秒級

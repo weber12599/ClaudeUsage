@@ -87,6 +87,63 @@ def test_dashboard_payload_carries_version():
     assert payload["version"] == claude_usage.__version__
 
 
+def test_scheduler_auto_refreshes_once_on_expired_token(monkeypatch):
+    from claude_usage import scheduler as sched_mod
+
+    cfg = default_config()
+    cfg.accounts = cfg.accounts[:1]
+    calls = {"poll": 0, "refresh": 0}
+
+    def fake_poll(account):
+        calls["poll"] += 1
+        if calls["poll"] == 1:
+            return Snapshot(state="expired", fetched_at=0.0, account_id=account.id)
+        return Snapshot(state="ok", fetched_at=1.0, account_id=account.id)
+
+    def fake_refresh(config_dir, timeout=60.0):
+        calls["refresh"] += 1
+        return {"ok": True, "message": "access token refreshed"}
+
+    monkeypatch.setattr(sched_mod, "poll_account", fake_poll)
+    monkeypatch.setattr(sched_mod.credentials, "refresh", fake_refresh)
+
+    sched = sched_mod.Scheduler(cfg)
+    sched._tick()
+
+    assert calls == {"poll": 2, "refresh": 1}
+    _, snap = sched.results.get_nowait()
+    assert snap.state == "ok"
+
+
+def test_scheduler_auto_refresh_is_rate_limited_after_failure(monkeypatch):
+    from claude_usage import scheduler as sched_mod
+
+    cfg = default_config()
+    cfg.accounts = cfg.accounts[:1]
+    calls = {"refresh": 0}
+
+    monkeypatch.setattr(
+        sched_mod, "poll_account",
+        lambda account: Snapshot(state="expired", fetched_at=0.0, account_id=account.id),
+    )
+
+    def fake_refresh(config_dir, timeout=60.0):
+        calls["refresh"] += 1
+        return {"ok": False, "message": "no refresh token"}
+
+    monkeypatch.setattr(sched_mod.credentials, "refresh", fake_refresh)
+
+    sched = sched_mod.Scheduler(cfg)
+    sched._tick()
+    _, snap = sched.results.get_nowait()
+    assert snap.state == "expired"
+    assert "auto token-refresh failed" in (snap.detail or "")
+
+    sched._next_due.clear()          # account is due again, but still within cooldown
+    sched._tick()
+    assert calls["refresh"] == 1
+
+
 def test_severity_and_menubar_fragment_for_expired():
     cfg = default_config()
     reg = Registry(cfg)
