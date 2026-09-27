@@ -167,13 +167,19 @@ def refresh(config_dir: str, timeout: float = 60.0) -> dict:
         return {"ok": False, "message": f"could not run `claude`: {exc}"}
 
     cred = load(config_dir)
-    if cred is not None and not cred.expired:
-        changed = before is None or before.access_token != cred.access_token
-        return {
-            "ok": True,
-            "message": "access token refreshed" if changed else "token already valid",
-            "expires_at": cred.expires_at_s or None,
-        }
+    if cred is not None:
+        # `expiresAt` can come back as 0 (unknown) even when the access token
+        # itself is dead, so `cred.expired` alone can't tell us refresh worked —
+        # confirm with a live call instead (verified 2026-09-27).
+        from . import poller
+        snap = poller.fetch(cred.access_token)
+        if snap.state in ("ok", "blocked"):
+            changed = before is None or before.access_token != cred.access_token
+            return {
+                "ok": True,
+                "message": "access token refreshed" if changed else "token already valid",
+                "expires_at": cred.expires_at_s or None,
+            }
 
     tail = ""
     for stream in (proc.stderr, proc.stdout):
@@ -188,6 +194,52 @@ def refresh(config_dir: str, timeout: float = 60.0) -> dict:
                    f"`claude auth login` on this account ({tail})",
         "expires_at": cred.expires_at_s if cred else None,
     }
+
+
+_LOGIN_TIMEOUT = 300.0  # generous window for the user to finish the browser sign-in
+
+
+def open_login(config_dir: str, timeout: float = _LOGIN_TIMEOUT) -> dict:
+    """Run `claude auth login` for this account: it opens the user's browser to
+    the Anthropic sign-in page and waits for the OAuth callback, then writes
+    fresh credentials to the Keychain. Blocks the calling thread until that
+    finishes, fails, or `timeout` elapses — call from a background thread, not
+    the UI/poller thread.
+
+    Returns {"ok": bool, "message": str, "expires_at": Optional[float]}.
+    """
+    cli = _find_claude_cli()
+    if cli is None:
+        return {"ok": False, "message": "could not find the `claude` CLI on this machine"}
+
+    env = dict(os.environ)
+    env["CLAUDE_CONFIG_DIR"] = _abs_config_dir(config_dir)
+    cli_dir = os.path.dirname(cli)
+    env["PATH"] = cli_dir + os.pathsep + env.get("PATH", "")
+    try:
+        proc = subprocess.run(
+            [cli, "auth", "login"],
+            capture_output=True, text=True, timeout=timeout, env=env,
+            stdin=subprocess.DEVNULL,
+        )
+    except subprocess.TimeoutExpired:
+        return {"ok": False,
+                "message": f"sign-in timed out after {int(timeout)}s — was the browser flow completed?"}
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"ok": False, "message": f"could not run `claude auth login`: {exc}"}
+
+    cred = load(config_dir)
+    if cred is not None and not cred.expired:
+        return {"ok": True, "message": "signed in", "expires_at": cred.expires_at_s or None}
+
+    tail = ""
+    for stream in (proc.stderr, proc.stdout):
+        lines = [ln.strip() for ln in (stream or "").splitlines() if ln.strip()]
+        if lines:
+            tail = lines[-1]
+            break
+    tail = tail or f"exit {proc.returncode}"
+    return {"ok": False, "message": f"sign-in did not produce valid credentials ({tail})"}
 
 
 def probe(config_dir: str) -> dict:

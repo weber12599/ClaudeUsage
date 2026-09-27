@@ -230,9 +230,20 @@ class ClaudeUsageApp(rumps.App):
             res = {"ok": False, "message": str(exc)}
         if res.get("ok"):
             self._notices.put(("Claude usage", account.name, "Access token refreshed"))
+            self.scheduler.refresh_now()
+            return
+
+        self._notices.put(("Claude usage", account.name,
+                           "Token refresh failed — opening browser to sign in…"))
+        try:
+            login_res = credentials.open_login(account.config_dir)
+        except Exception as exc:  # noqa: BLE001 - a worker crash must not be silent
+            login_res = {"ok": False, "message": str(exc)}
+        if login_res.get("ok"):
+            self._notices.put(("Claude usage", account.name, "Signed in"))
         else:
             self._notices.put(("Claude usage", account.name,
-                               f"Token refresh failed — {res.get('message', 'unknown error')}"))
+                               f"Sign-in failed — {login_res.get('message', 'unknown error')}"))
         self.scheduler.refresh_now()
 
     @objc.python_method
