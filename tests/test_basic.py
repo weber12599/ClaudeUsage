@@ -75,6 +75,28 @@ def test_header_parsing_blocked():
     assert snap.blocked_reason == "org_spend_cap_reached"
 
 
+def test_header_parsing_enterprise_monthly_only():
+    from claude_usage.state import display_pct, menubar_pct
+
+    now = 1_800_000_000.0
+    snap = _parse(
+        {
+            "anthropic-ratelimit-unified-status": "allowed",
+            "anthropic-ratelimit-unified-representative-claim": "overage",
+            "anthropic-ratelimit-unified-overage-utilization": "0.17",
+            "anthropic-ratelimit-unified-overage-status": "allowed",
+            "anthropic-ratelimit-unified-overage-reset": str(int(now + 86400)),
+        },
+        now,
+    )
+    assert snap.state == "ok"
+    assert snap.five_hour is None and snap.seven_day is None
+    assert snap.overage.pct == 17.0
+    assert snap.overage.reset == int(now + 86400)
+    assert menubar_pct(snap) == 17.0
+    assert display_pct(snap) == 17.0
+
+
 def test_config_roundtrip():
     cfg = default_config()
     again = Config.from_dict(cfg.to_dict())

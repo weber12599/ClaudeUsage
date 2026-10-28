@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 from . import __version__
 from .config import Account, Config
-from .poller import Snapshot
+from .poller import Snapshot, Window
 
 # severity buckets, worst last
 SEV_ORDER = ["nodata", "ok", "warn", "offline", "expired", "nocreds", "crit", "blocked"]
@@ -19,7 +19,7 @@ class AccountState:
     account: Account
     snapshot: Optional[Snapshot] = None          # last result (success or failure)
     last_ok: Optional[Snapshot] = None           # last state == "ok"
-    notified: Dict[str, int] = field(default_factory=dict)  # "5h"/"7d" -> highest threshold notified
+    notified: Dict[str, int] = field(default_factory=dict)  # "5h"/"7d"/"month" -> highest threshold notified
 
     def display_snapshot(self) -> Optional[Snapshot]:
         if self.snapshot and self.snapshot.state in ("ok", "blocked"):
@@ -27,18 +27,29 @@ class AccountState:
         return self.last_ok or self.snapshot
 
 
-def display_pct(snap: Optional[Snapshot]) -> Optional[float]:
+def usage_windows(snap: Optional[Snapshot]) -> Dict[str, Window]:
+    """Windows that carry a percentage, by label. Enterprise plans have no 5h/7d
+    windows, only the monthly overage bucket, so that one stands in for them."""
     if snap is None:
-        return None
-    vals = [w.pct for w in (snap.five_hour, snap.seven_day) if w and w.pct is not None]
+        return {}
+    wins = {label: w for label, w in (("5h", snap.five_hour), ("7d", snap.seven_day))
+            if w and w.pct is not None}
+    if not wins and snap.overage and snap.overage.pct is not None:
+        wins["month"] = snap.overage
+    return wins
+
+
+def display_pct(snap: Optional[Snapshot]) -> Optional[float]:
+    vals = [w.pct for w in usage_windows(snap).values()]
     return max(vals) if vals else None
 
 
 def menubar_pct(snap: Optional[Snapshot]) -> Optional[float]:
-    """Number shown on the menubar: the 5-hour window only (no fallback to 7d)."""
-    if snap is None or snap.five_hour is None:
-        return None
-    return snap.five_hour.pct
+    """Number shown on the menubar: the 5-hour window (no fallback to 7d), or the
+    monthly bucket on plans that have no 5h/7d windows at all."""
+    wins = usage_windows(snap)
+    w = wins.get("5h") or wins.get("month")
+    return w.pct if w else None
 
 
 def pct_bucket(pct: Optional[float]) -> str:

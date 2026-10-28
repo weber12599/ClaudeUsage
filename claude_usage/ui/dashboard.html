@@ -57,8 +57,8 @@
   .badge.state-warn { color: var(--warn); border-color: var(--warn); }
   .badge.state-crit, .badge.state-blocked { color: var(--crit); border-color: var(--crit); }
   .grow { flex: 1; }
-  .meters { margin-top: 8px; display: grid; grid-template-columns: 28px 1fr auto; gap: 4px 8px; align-items: center; }
-  .meters .lbl { color: var(--muted); }
+  .meters { margin-top: 8px; display: grid; grid-template-columns: minmax(28px, auto) 1fr auto; gap: 4px 8px; align-items: center; }
+  .meters .lbl { color: var(--muted); white-space: nowrap; }
   .track { height: 6px; background: var(--track); border-radius: 999px; overflow: hidden; }
   .fill { height: 100%; background: var(--ok); border-radius: 999px; }
   .fill.warn { background: var(--warn); } .fill.crit { background: var(--crit); }
@@ -177,8 +177,13 @@ function statusCard(a) {
   } else if (sev === "nocreds") {
     body = `<div class="note err">no Keychain entry for this CLAUDE_CONFIG_DIR</div>`;
   } else {
-    body = `<div class="meters">${windowRow("5h", snap.five_hour)}${windowRow("7d", snap.seven_day)}</div>`;
-    if (snap.overage_pct) body += `<div class="note">overage ${snap.overage_pct.toFixed(0)}%</div>`;
+    const has = w => w && w.pct != null;
+    if (!has(snap.five_hour) && !has(snap.seven_day) && has(snap.overage)) {
+      body = `<div class="meters">${windowRow("month", snap.overage)}</div>`;   // enterprise: monthly bucket only
+    } else {
+      body = `<div class="meters">${windowRow("5h", snap.five_hour)}${windowRow("7d", snap.seven_day)}</div>`;
+      if (snap.overage_pct) body += `<div class="note">overage ${snap.overage_pct.toFixed(0)}%</div>`;
+    }
   }
   const cap = snap.fetched_at ? `<div class="note">captured ${rel(snap.fetched_at)}${a.stale ? " · stale" : ""}</div>` : "";
   return `<div class="card">

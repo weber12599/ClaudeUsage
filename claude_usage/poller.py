@@ -7,6 +7,9 @@ Verified 2026-09-04 (see verify.sh). Two response shapes were observed:
   blocked  -> HTTP 429, anthropic-ratelimit-unified-status: rejected
               NO 5h/7d headers; only -status, -representative-claim: overage,
               -overage-*, -overage-disabled-reason, retry-after, -reset
+  enterprise -> HTTP 200, status: allowed, representative-claim: overage
+              NO 5h/7d headers; usage is only the monthly -overage-* bucket
+              (verified 2026-10-28)
 
 Every header is treated as optional.
 """
@@ -52,6 +55,7 @@ class Snapshot:
     overall_status: Optional[str] = None
     five_hour: Optional[Window] = None
     seven_day: Optional[Window] = None
+    overage: Optional[Window] = None    # monthly spend bucket; the only window on enterprise
     representative: Optional[str] = None
     overage_pct: Optional[float] = None
     blocked_reason: Optional[str] = None
@@ -110,6 +114,7 @@ def _parse(headers: dict, now: float) -> Snapshot:
         overall_status=overall,
         five_hour=_window(h, "5h"),
         seven_day=_window(h, "7d"),
+        overage=_window(h, "overage"),
         representative=h.get(f"{_H}-representative-claim"),
         overage_pct=_pct(h.get(f"{_H}-overage-utilization")),
         blocked_reason=h.get(f"{_H}-overage-disabled-reason"),

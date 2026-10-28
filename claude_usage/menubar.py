@@ -31,7 +31,7 @@ from . import __version__
 from . import config as config_mod
 from .config import Account, Config
 from .scheduler import Scheduler
-from .state import Registry
+from .state import Registry, usage_windows
 
 
 def _notify(title: str, subtitle: str, message: str) -> None:
@@ -177,10 +177,8 @@ class ClaudeUsageApp(rumps.App):
                         f"Blocked: {st.snapshot.blocked_reason or 'rate limit reached'}")
             return
         st.notified.pop("blocked", None)
-        for label, win in (("5h", st.snapshot.five_hour), ("7d", st.snapshot.seven_day)):
-            pct = win.pct if win else None
-            if pct is None:
-                continue
+        for label, win in usage_windows(st.snapshot).items():
+            pct = win.pct
             prev = st.notified.get(label, 0)
             applicable = max([t for t in self.cfg.notify_thresholds if pct >= t], default=0)
             if applicable > prev:
