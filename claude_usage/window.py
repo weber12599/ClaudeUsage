@@ -27,6 +27,7 @@ from Foundation import NSMakeRect, NSMakeSize, NSObject
 from WebKit import WKWebView, WKWebViewConfiguration
 
 POPOVER_SIZE = (580, 480)
+POPOVER_HEIGHT_RANGE = (120, 720)  # the page reports its content height; clamp to this
 
 
 def _dumps(obj) -> str:
@@ -127,6 +128,18 @@ class DashboardController(NSObject):
         self._eval(f"window.__bridgeReply({_dumps({'reqId': req_id, 'result': result})})")
 
     @objc.python_method
+    def _resize(self, height):
+        try:
+            h = int(height)
+        except (TypeError, ValueError):
+            return
+        lo, hi = POPOVER_HEIGHT_RANGE
+        h = max(lo, min(hi, h))
+        w = POPOVER_SIZE[0]
+        if int(self.popover.contentSize().height) != h:
+            self.popover.setContentSize_(NSMakeSize(w, h))
+
+    @objc.python_method
     def _pick_dir(self) -> Optional[str]:
         panel = NSOpenPanel.openPanel()
         panel.setCanChooseFiles_(False)
@@ -158,6 +171,9 @@ class DashboardController(NSObject):
             return
         if action == "quit":
             NSApp.terminate_(None)
+            return
+        if action == "resize":
+            self._resize(msg.get("height"))
             return
 
         handler = self.handlers.get(action)

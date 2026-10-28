@@ -25,7 +25,7 @@ from AppKit import (
     NSMenu,
     NSMenuItem,
 )
-from Foundation import NSObject
+from Foundation import NSDistributedNotificationCenter, NSObject
 
 from . import __version__
 from . import config as config_mod
@@ -64,6 +64,9 @@ class _StatusClickProxy(NSObject):
     def refresh_(self, _):
         self._app.scheduler.refresh_now()
 
+    def themeChanged_(self, _):
+        self._app._refresh_title()             # re-resolve colours drawn into the gauges
+
     def openConfig_(self, _):
         self._app._open_config()
 
@@ -80,12 +83,13 @@ class ClaudeUsageApp(rumps.App):
         self._dash = None                      # DashboardController (lazy)
         self._notices: "_queue.Queue[tuple[str, str, str]]" = _queue.Queue()
         self._proxy = _StatusClickProxy.alloc().initWithApp_(self)
+        self._button = None                    # status button once wired (styled title)
 
         self._timer = rumps.Timer(self._drain, 1)
         self._timer.start()
         self._wire_timer = rumps.Timer(self._wire_status_item, 0.3)
         self._wire_timer.start()
-        self.title = self.registry.title()
+        self._refresh_title()
 
     # -- take over the status item once rumps has created it -----------
     def _wire_status_item(self, timer):
@@ -97,6 +101,10 @@ class ClaudeUsageApp(rumps.App):
             button.setTarget_(self._proxy)
             button.setAction_("statusItemClicked:")
             button.sendActionOn_(NSEventMaskLeftMouseUp | NSEventMaskRightMouseUp)
+            self._button = button
+            NSDistributedNotificationCenter.defaultCenter().addObserver_selector_name_object_(
+                self._proxy, "themeChanged:", "AppleInterfaceThemeChangedNotification", None)
+            self._refresh_title()
         except Exception as exc:  # noqa: BLE001 - fall back to a plain menu
             print(f"[menubar] could not attach popover handler: {exc}; using menu")
             self.menu = [
@@ -106,6 +114,21 @@ class ClaudeUsageApp(rumps.App):
                 rumps.MenuItem("Open config file", callback=lambda _: self._open_config()),
                 rumps.MenuItem("Quit", callback=lambda _: NSApp.terminate_(None)),
             ]
+
+    @objc.python_method
+    def _refresh_title(self):
+        if self._button is None:                # not wired yet / fallback: plain rumps title
+            self.title = self.registry.title()
+            return
+        try:
+            from .statusbar import apply
+            apply(self._button, self.registry.menubar_segments(),
+                  style=self.cfg.menubar_style, show_pct=self.cfg.menubar_show_pct)
+            self._button.setToolTip_(self.registry.title())
+        except Exception as exc:  # noqa: BLE001 - never lose the title over drawing
+            print(f"[menubar] styled title failed: {exc}")
+            self._button.setImage_(None)
+            self._button.setTitle_(self.registry.title())
 
     # -- actions -------------------------------------------------------
     @objc.python_method
@@ -161,7 +184,7 @@ class ClaudeUsageApp(rumps.App):
             self._maybe_notify(account_id)
             changed = True
         if changed:
-            self.title = self.registry.title()
+            self._refresh_title()
             if self._dash is not None and self._dash.is_visible():
                 self._dash.render(self.registry.dashboard_payload())
 
@@ -207,7 +230,7 @@ class ClaudeUsageApp(rumps.App):
         config_mod.save(self.cfg)
         self.scheduler.reload(self.cfg)
         self.registry.reconcile(self.cfg)
-        self.title = self.registry.title()
+        self._refresh_title()
         return self.registry.dashboard_payload()
 
     @objc.python_method
@@ -286,6 +309,10 @@ class ClaudeUsageApp(rumps.App):
             self.cfg.notify_thresholds = sorted(
                 {int(t) for t in payload["notify_thresholds"] if 0 < int(t) <= 100}
             )
+        if payload.get("menubar_style") in ("color", "mono"):
+            self.cfg.menubar_style = payload["menubar_style"]
+        if payload.get("menubar_show_pct") is not None:
+            self.cfg.menubar_show_pct = bool(payload["menubar_show_pct"])
         return self._persist()
 
     @objc.python_method

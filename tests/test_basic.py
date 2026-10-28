@@ -173,3 +173,27 @@ def test_severity_and_menubar_fragment_for_expired():
     st.snapshot = Snapshot(state="expired", fetched_at=0.0, account_id=st.account.id)
     assert severity(st, cfg) == "expired"
     assert "⚠" in menubar_fragment(st, cfg)
+
+
+def test_menubar_segments_bars_and_states():
+    from claude_usage.poller import Window
+
+    cfg = default_config()
+    reg = Registry(cfg)
+    st = reg.states[cfg.accounts[0].id]
+    st.snapshot = Snapshot(state="ok", fetched_at=9e12, account_id=st.account.id,
+                           five_hour=Window(43.0, None, None), seven_day=Window(18.0, None, None))
+    seg = reg.menubar_segments()[0]
+    assert seg["bars"] == [43.0, 18.0] and seg["pct"] == 43.0 and seg["severity"] == "ok"
+
+    st.snapshot = Snapshot(state="expired", fetched_at=0.0, account_id=st.account.id)
+    assert reg.menubar_segments()[0]["severity"] == "expired"
+
+
+def test_menubar_display_options_round_trip():
+    cfg = default_config()
+    assert (cfg.menubar_style, cfg.menubar_show_pct) == ("color", True)
+    cfg.menubar_style, cfg.menubar_show_pct = "mono", False
+    back = Config.from_dict(cfg.to_dict())
+    assert (back.menubar_style, back.menubar_show_pct) == ("mono", False)
+    assert Config.from_dict({"menubar_style": "bogus"}).menubar_style == "color"

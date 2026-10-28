@@ -8,13 +8,13 @@
   :root {
     --bg: #f5f5f4; --card: #ffffff; --ink: #1c1917; --muted: #78716c;
     --line: #e7e5e4; --accent: #2563eb; --ok: #16a34a; --warn: #d97706;
-    --crit: #dc2626; --track: #e7e5e4;
+    --crit: #dc2626; --track: #e7e5e4; --shadow: 0 1px 2px rgba(0,0,0,.06);
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #1c1917; --card: #292524; --ink: #f5f5f4; --muted: #a8a29e;
-      --line: #44403c; --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24;
-      --crit: #f87171; --track: #44403c;
+      --line: #3a3532; --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24;
+      --crit: #f87171; --track: #44403c; --shadow: none;
     }
   }
   * { box-sizing: border-box; }
@@ -23,12 +23,11 @@
     background: var(--bg); color: var(--ink);
   }
   header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px; border-bottom: 1px solid var(--line);
-    position: sticky; top: 0; background: var(--bg);
+    display: flex; align-items: center; gap: 4px;
+    padding: 10px 14px 6px; position: sticky; top: 0; background: var(--bg); z-index: 1;
   }
   header h1 { font-size: 13px; font-weight: 600; margin: 0; flex: 1; }
-  header .sub { color: var(--muted); font-size: 11px; }
+  header .sub { color: var(--muted); font-size: 11px; margin-right: 4px; }
   button {
     font: inherit; padding: 4px 10px; border: 1px solid var(--line);
     background: var(--card); color: var(--ink); border-radius: 6px; cursor: pointer;
@@ -36,88 +35,104 @@
   button:hover { border-color: var(--accent); }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   button.danger { color: var(--crit); }
-  main { padding: 12px 14px 24px; }
-  section { margin-bottom: 18px; }
-  section > h2 {
-    font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-    color: var(--muted); margin: 0 0 8px;
+  button.icon {
+    border: none; background: none; color: var(--muted); padding: 2px 6px;
+    font-size: 14px; line-height: 1; border-radius: 5px;
   }
-  .card {
-    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
-    padding: 10px 12px; margin-bottom: 8px;
+  button.icon:hover, button.icon.on { color: var(--ink); background: var(--line); }
+  button.link { border: none; background: none; color: var(--accent); padding: 4px 0; }
+  main { padding: 4px 14px 16px; }
+  section { margin-bottom: 14px; }
+  .group {
+    background: var(--card); border-radius: 10px; box-shadow: var(--shadow);
+    overflow: hidden;
   }
-  .acct-head { display: flex; align-items: center; gap: 8px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .acct { padding: 9px 12px; }
+  .acct + .acct { border-top: 1px solid var(--line); }
+  .acct-head { display: flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
   .acct-name { font-weight: 600; }
-  .badge {
-    font-size: 10px; padding: 1px 6px; border-radius: 999px;
-    border: 1px solid var(--line); color: var(--muted);
-  }
-  .badge.state-ok { color: var(--ok); border-color: var(--ok); }
-  .badge.state-warn { color: var(--warn); border-color: var(--warn); }
-  .badge.state-crit, .badge.state-blocked { color: var(--crit); border-color: var(--crit); }
+  .plan { color: var(--muted); font-size: 11px; }
+  .badge { font-size: 11px; color: var(--muted); }
+  .badge.state-warn { color: var(--warn); }
+  .badge.state-crit, .badge.state-blocked, .badge.state-expired, .badge.state-nocreds { color: var(--crit); }
   .grow { flex: 1; }
-  .meters { margin-top: 8px; display: grid; grid-template-columns: minmax(28px, auto) 1fr auto; gap: 4px 8px; align-items: center; }
-  .meters .lbl { color: var(--muted); white-space: nowrap; }
-  .track { height: 6px; background: var(--track); border-radius: 999px; overflow: hidden; }
+  .meters { margin: 6px 0 0 15px; display: grid; grid-template-columns: minmax(28px, auto) 1fr auto; gap: 3px 8px; align-items: center; }
+  .meters .lbl { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .track { height: 4px; background: var(--track); border-radius: 999px; overflow: hidden; }
   .fill { height: 100%; background: var(--ok); border-radius: 999px; }
   .fill.warn { background: var(--warn); } .fill.crit { background: var(--crit); }
-  .meters .val { font-variant-numeric: tabular-nums; }
+  .meters .val { font-variant-numeric: tabular-nums; font-size: 12px; }
   .reset { color: var(--muted); font-size: 11px; }
-  .note { color: var(--muted); font-size: 11px; margin-top: 6px; }
+  .note { color: var(--muted); font-size: 11px; margin: 4px 0 0 15px; }
   .note.err { color: var(--crit); }
   .note button { padding: 1px 7px; font-size: 11px; margin: 0 2px; vertical-align: baseline; }
   .note button[disabled] { opacity: .6; cursor: default; }
+  .editor { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  #new-list .editor { background: var(--card); border-radius: 10px; box-shadow: var(--shadow); padding: 10px 12px; margin: 8px 0 0; border: none; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0; }
-  .row label { color: var(--muted); width: 92px; flex: none; }
+  .row label { color: var(--muted); width: 80px; flex: none; }
   input[type=text], input[type=number] {
-    font: inherit; padding: 4px 7px; border: 1px solid var(--line);
+    font: inherit; padding: 3px 7px; border: 1px solid var(--line);
     background: var(--bg); color: var(--ink); border-radius: 6px; min-width: 0;
   }
   input[type=text].path { flex: 1; }
+  select { font: inherit; color: var(--ink); }
   .swatches { display: flex; gap: 4px; }
-  .swatch { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+  .swatch { width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
   .swatch.sel { border-color: var(--ink); }
   .probe { font-size: 11px; }
   .probe.ok { color: var(--ok); } .probe.bad { color: var(--crit); }
-  .acct-actions { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
-  .empty { color: var(--muted); text-align: center; padding: 24px; }
+  .actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+  .empty { color: var(--muted); text-align: center; padding: 20px; }
+  #settings h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 6px;
+  }
+  #settings .group { padding: 10px 12px; }
+  footer { display: flex; align-items: center; padding: 0 14px 12px; }
 </style>
 </head>
 <body>
+<div id="app">
 <header>
   <h1>Claude Usage</h1>
   <span class="sub" id="updated"></span>
-  <button id="refresh">Refresh</button>
+  <button class="icon" id="refresh" title="Refresh now">↻</button>
+  <button class="icon" id="toggle-settings" title="Settings">⚙</button>
 </header>
 <main>
-  <section id="status"><h2>Status</h2><div id="status-list"></div></section>
-  <section id="manage">
-    <h2>Accounts</h2>
-    <div id="acct-list"></div>
-    <button id="add">+ Add account</button>
-  </section>
-  <section id="globals">
+  <section id="settings" hidden>
     <h2>Settings</h2>
-    <div class="card">
+    <div class="group">
       <div class="row"><label>Poll interval</label>
-        <input type="number" id="g-interval" min="30" step="30"> <span class="reset">seconds (global)</span></div>
+        <input type="number" id="g-interval" min="30" step="30" style="width:80px"> <span class="reset">seconds</span></div>
       <div class="row"><label>Stale after</label>
-        <input type="number" id="g-stale" min="60" step="60"> <span class="reset">seconds</span></div>
+        <input type="number" id="g-stale" min="60" step="60" style="width:80px"> <span class="reset">seconds</span></div>
       <div class="row"><label>Notify at</label>
-        <input type="text" id="g-thresholds" placeholder="80, 95"> <span class="reset">% thresholds</span></div>
-      <div class="acct-actions"><button class="primary" id="g-save">Save settings</button></div>
+        <input type="text" id="g-thresholds" placeholder="80, 95" style="width:80px"> <span class="reset">%</span></div>
+      <div class="row"><label>Menubar</label>
+        <select id="g-style"><option value="color">Color bars</option><option value="mono">Monochrome</option></select>
+        <label style="width:auto"><input type="checkbox" id="g-showpct"> Show %</label></div>
+      <div class="actions">
+        <button class="primary" id="g-save">Save</button>
+        <span class="grow"></span>
+        <button id="open-config">Open config file</button>
+        <button class="danger" id="quit">Quit</button>
+      </div>
     </div>
   </section>
-  <section id="footer">
-    <div class="acct-actions">
-      <button id="open-config">Open config file</button>
-      <button class="danger" id="quit">Quit</button>
-      <span class="grow"></span>
-      <span class="reset" id="version"></span>
-    </div>
+  <section>
+    <div class="group" id="status-list"></div>
+    <div id="new-list"></div>
   </section>
 </main>
+<footer>
+  <button class="link" id="add">+ Add account</button>
+  <span class="grow"></span>
+  <span class="reset" id="version"></span>
+</footer>
+</div>
 <script>
 const COLORS = ["#3b82f6","#ef4444","#22c55e","#a855f7","#f59e0b","#14b8a6"];
 const isNative = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge);
@@ -133,6 +148,7 @@ window.__bridgeReply = (m) => { const r = _pending[m.reqId]; if (r) { delete _pe
 window.__render = (state) => { try { render(state); } catch (e) { console.error(e); } };
 
 let STATE = { config: {}, accounts: [] };
+const OPEN = new Set();   // account ids whose inline editor is expanded
 const $ = (id) => document.getElementById(id);
 
 function rel(ts) {
@@ -156,22 +172,20 @@ function windowRow(label, w) {
     <div class="val">${w.pct.toFixed(0)}%<span class="reset"> · ${rel(w.reset)}</span></div>`;
 }
 
-function statusCard(a) {
+// Only abnormal states get a badge; healthy accounts let the meters speak.
+const BADGES = { blocked: "⛔ blocked", expired: "⚠ token expired", nocreds: "no credentials",
+                 offline: "offline", nodata: "no data" };
+
+function statusRow(a) {
   const snap = a.snapshot || {};
   const sev = a.severity || "nodata";
-  let badge = sev, cls = "state-" + (["ok","warn","crit","blocked"].includes(sev) ? sev : "");
-  if (sev === "blocked") badge = "blocked";
-  else if (sev === "expired") badge = "token expired";
-  else if (sev === "nocreds") badge = "no credentials";
-  else if (sev === "offline") badge = "offline";
-  else if (sev === "nodata") badge = "no data";
-  else badge = (a.display_pct == null ? "—" : a.display_pct.toFixed(0) + "%");
+  const badge = BADGES[sev] ? `<span class="badge state-${sev}">${BADGES[sev]}</span>` : "";
 
   let body = "";
   if (sev === "blocked") {
-    body = `<div class="note err">⛔ ${esc(snap.blocked_reason || "rate limit reached")} · unblocks ${rel(snap.unblock_at)}</div>`;
+    body = `<div class="note err">${esc(snap.blocked_reason || "rate limit reached")} · unblocks ${rel(snap.unblock_at)}</div>`;
   } else if (sev === "expired") {
-    body = `<div class="note err">⚠ token expired —
+    body = `<div class="note err">
       <button data-act="refresh-token" data-id="${esc(a.id)}">Refresh token</button>
       or run <code>claude</code> once on this account</div>`;
   } else if (sev === "nocreds") {
@@ -185,22 +199,32 @@ function statusCard(a) {
       if (snap.overage_pct) body += `<div class="note">overage ${snap.overage_pct.toFixed(0)}%</div>`;
     }
   }
-  const cap = snap.fetched_at ? `<div class="note">captured ${rel(snap.fetched_at)}${a.stale ? " · stale" : ""}</div>` : "";
-  return `<div class="card">
-    <div class="acct-head">
+  const stale = a.stale && snap.fetched_at ? `<div class="note">stale · captured ${rel(snap.fetched_at)}</div>` : "";
+  const plan = a.subscription || snap.subscription;
+  return `<div class="acct-head">
       <span class="dot" style="background:${esc(a.color)}"></span>
       <span class="acct-name">${esc(a.name)}</span>
-      ${a.subscription || (snap && snap.subscription) ? `<span class="badge">${esc(a.subscription || snap.subscription)}</span>` : ""}
-      ${a.enabled ? "" : `<span class="badge">disabled</span>`}
+      ${plan ? `<span class="plan">${esc(plan)}</span>` : ""}
+      ${a.enabled ? "" : `<span class="plan">· disabled</span>`}
       <span class="grow"></span>
-      <span class="badge ${cls}">${esc(badge)}</span>
-    </div>${body}${cap}
-  </div>`;
+      ${badge}
+      <button class="icon ${OPEN.has(a.id) ? "on" : ""}" data-act="edit" data-id="${esc(a.id)}" title="Edit">⋯</button>
+    </div>${body}${stale}`;
+}
+
+function closeEditor(id) {
+  OPEN.delete(id);
+  const row = $("status-list").querySelector(`.acct[data-id="${CSS.escape(id)}"]`);
+  if (!row) return;
+  const ed = row.querySelector(".editor"); if (ed) ed.remove();
+  row.querySelector('[data-act="edit"]').classList.remove("on");
 }
 
 function acctEditor(a) {
+  const isNew = a.id.startsWith("__new");
   const d = document.createElement("div");
-  d.className = "card";
+  d.className = "editor";
+  d.dataset.id = a.id;
   const iv = a.poll_interval_seconds == null ? "" : a.poll_interval_seconds;
   d.innerHTML = `
     <div class="row"><label>Name</label><input type="text" data-f="name" value="${esc(a.name)}"></div>
@@ -214,11 +238,13 @@ function acctEditor(a) {
       </span></div>
     <div class="row"><label>Enabled</label><input type="checkbox" data-f="enabled" ${a.enabled ? "checked" : ""}>
       <label style="width:auto">Interval</label>
-      <input type="number" data-f="poll_interval_seconds" value="${iv}" placeholder="global" min="30" step="30" style="width:90px">
+      <input type="number" data-f="poll_interval_seconds" value="${iv}" placeholder="global" min="30" step="30" style="width:80px">
       <span class="reset">sec</span></div>
-    <div class="acct-actions">
-      <button class="primary" data-act="save">Save</button>
-      <button class="danger" data-act="remove">Remove</button>
+    <div class="actions">
+      <button class="primary" data-act="save">${isNew ? "Add" : "Save"}</button>
+      <button data-act="cancel">Cancel</button>
+      <span class="grow"></span>
+      ${isNew ? "" : `<button class="danger" data-act="remove">Remove</button>`}
     </div>`;
   const get = () => {
     const o = { id: a.id };
@@ -241,6 +267,7 @@ function acctEditor(a) {
       else { el.textContent = "✗ no credentials" + (r.dir_exists ? "" : " · dir not found"); el.className = "probe bad"; }
     });
   };
+  const close = () => isNew ? d.remove() : closeEditor(a.id);
   d.querySelector('[data-f="config_dir"]').addEventListener("change", doProbe);
   d.querySelectorAll(".swatch").forEach(s => s.addEventListener("click", () => {
     d.querySelectorAll(".swatch").forEach(x => x.classList.remove("sel"));
@@ -250,11 +277,11 @@ function acctEditor(a) {
     call("pickDir").then(r => { if (r && r.path) { d.querySelector('[data-f="config_dir"]').value = r.path; doProbe(); } });
   });
   d.querySelector('[data-act="save"]').addEventListener("click", () => {
-    call(a.id.startsWith("__new") ? "addAccount" : "updateAccount", get()).then(window.__render);
+    call(isNew ? "addAccount" : "updateAccount", get()).then(s => { close(); window.__render(s); });
   });
-  d.querySelector('[data-act="remove"]').addEventListener("click", () => {
-    if (a.id.startsWith("__new")) { d.remove(); return; }
-    call("removeAccount", { id: a.id }).then(window.__render);
+  d.querySelector('[data-act="cancel"]').addEventListener("click", close);
+  if (!isNew) d.querySelector('[data-act="remove"]').addEventListener("click", () => {
+    call("removeAccount", { id: a.id }).then(s => { OPEN.delete(a.id); window.__render(s); });
   });
   setTimeout(doProbe, 0);
   return d;
@@ -263,20 +290,46 @@ function acctEditor(a) {
 function render(state) {
   STATE = state || STATE;
   $("updated").textContent = STATE.generated_at ? "updated " + rel(STATE.generated_at) : "";
-  $("status-list").innerHTML = STATE.accounts.length
-    ? STATE.accounts.map(statusCard).join("")
-    : `<div class="empty">No accounts yet — add one below.</div>`;
-  const list = $("acct-list"); list.innerHTML = "";
-  STATE.accounts.forEach(a => list.appendChild(acctEditor(a)));
+  const list = $("status-list");
+  // Reuse open editors so a background re-render doesn't wipe in-progress edits.
+  const keep = {};
+  list.querySelectorAll(".editor").forEach(el => { keep[el.dataset.id] = el; });
+  list.innerHTML = STATE.accounts.length ? "" : `<div class="empty">No accounts yet.</div>`;
+  STATE.accounts.forEach(a => {
+    const row = document.createElement("div");
+    row.className = "acct"; row.dataset.id = a.id;
+    row.innerHTML = statusRow(a);
+    if (OPEN.has(a.id)) row.appendChild(keep[a.id] || acctEditor(a));
+    list.appendChild(row);
+  });
   const c = STATE.config || {};
   $("g-interval").value = c.poll_interval_seconds || 300;
   $("g-stale").value = c.stale_after_seconds || 1800;
   $("g-thresholds").value = (c.notify_thresholds || [80, 95]).join(", ");
+  $("g-style").value = c.menubar_style || "color";
+  $("g-showpct").checked = c.menubar_show_pct !== false;
   $("version").textContent = STATE.version ? "v" + STATE.version : "";
 }
 
-$("refresh").addEventListener("click", () => { $("refresh").textContent = "…"; call("refreshNow").then(s => { $("refresh").textContent = "Refresh"; window.__render(s); }); });
+$("refresh").addEventListener("click", () => {
+  const b = $("refresh"); b.disabled = true; b.textContent = "…";
+  call("refreshNow").then(s => { b.disabled = false; b.textContent = "↻"; window.__render(s); });
+});
+$("toggle-settings").addEventListener("click", () => {
+  const s = $("settings"); s.hidden = !s.hidden;
+  $("toggle-settings").classList.toggle("on", !s.hidden);
+});
 $("status-list").addEventListener("click", (e) => {
+  const edit = e.target.closest('[data-act="edit"]');
+  if (edit) {
+    const id = edit.dataset.id;
+    if (OPEN.has(id)) return closeEditor(id);
+    const a = STATE.accounts.find(x => x.id === id);
+    if (!a) return;
+    OPEN.add(id); edit.classList.add("on");
+    edit.closest(".acct").appendChild(acctEditor(a));
+    return;
+  }
   const btn = e.target.closest('[data-act="refresh-token"]');
   if (!btn || btn.disabled) return;
   btn.disabled = true; btn.textContent = "refreshing…";
@@ -284,7 +337,7 @@ $("status-list").addEventListener("click", (e) => {
   // result surfaces via a system notification + the next status re-render
 });
 $("add").addEventListener("click", () => {
-  $("acct-list").appendChild(acctEditor({
+  $("new-list").appendChild(acctEditor({
     id: "__new" + (++_seq), name: "New account", short: "N", config_dir: "~/.claude",
     enabled: true, color: COLORS[STATE.accounts.length % COLORS.length], poll_interval_seconds: null
   }));
@@ -293,12 +346,25 @@ $("g-save").addEventListener("click", () => {
   call("saveGlobal", {
     poll_interval_seconds: +$("g-interval").value || null,
     stale_after_seconds: +$("g-stale").value || null,
-    notify_thresholds: $("g-thresholds").value.split(",").map(s => parseInt(s.trim(), 10)).filter(n => n > 0)
+    notify_thresholds: $("g-thresholds").value.split(",").map(s => parseInt(s.trim(), 10)).filter(n => n > 0),
+    menubar_style: $("g-style").value,
+    menubar_show_pct: $("g-showpct").checked
   }).then(window.__render);
 });
 
 $("open-config").addEventListener("click", () => call("openConfigFile"));
 $("quit").addEventListener("click", () => call("quit"));
+
+// Size the popover to the content instead of leaving a fixed-height gap below it.
+if (isNative && window.ResizeObserver) {
+  let lastH = 0;
+  new ResizeObserver(() => {
+    const h = Math.ceil($("app").getBoundingClientRect().height);
+    if (h === lastH) return;
+    lastH = h;
+    window.webkit.messageHandlers.bridge.postMessage(JSON.stringify({ action: "resize", height: h }));
+  }).observe($("app"));
+}
 
 call("ready").then(s => { if (s) window.__render(s); });
 </script>

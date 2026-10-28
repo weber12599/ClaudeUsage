@@ -4,11 +4,16 @@
 
 A macOS menubar tool that watches Claude usage across **multiple accounts**, one
 per `CLAUDE_CONFIG_DIR`. The menubar shows each account's usage; left-click drops
-down a dashboard with a table and an editor for adding/removing accounts.
+down a dashboard listing every account, with inline editing and settings.
 
 ```
- P 43%  ·  W ⛔          ← menubar title
+ P ▬▬ 43%   W ▬▬ ⊘       ← menubar title: label, 5h/7d mini bars, 5h %
 ```
+
+The bars are green / orange / red by usage; blocked, expired and missing
+credentials show as SF Symbols. Settings (⚙) switch between **Color bars** and
+**Monochrome** (a template image tinted like the system's own icons) and can
+hide the percentage.
 
 ## How it works
 
@@ -136,13 +141,14 @@ with the zip attached. Users then download, unzip into `/Applications`, and run
 
 | gesture | result |
 |---|---|
-| **left-click** menubar item | dashboard popover (status table + account editor + settings) |
+| **left-click** menubar item | dashboard popover (account list; ⋯ edits an account, ⚙ opens settings) |
 | **right-click** / control-click | small menu: Refresh now / Open config file / Quit |
 | click outside the popover | closes it |
 
-In the dashboard's **Accounts** section: add / edit / remove accounts, toggle
-enabled, pick a colour, set a per-account poll interval, and choose the config
-dir (with a live "credentials found / not found" check).
+From an account's **⋯** editor (or **+ Add account**): edit / remove accounts,
+toggle enabled, pick a colour, set a per-account poll interval, and choose the
+config dir (with a live "credentials found / not found" check). The popover
+sizes itself to its content.
 
 ## Config
 
@@ -153,6 +159,8 @@ dir (with a live "credentials found / not found" check).
   "poll_interval_seconds": 300,
   "stale_after_seconds": 1800,
   "notify_thresholds": [80, 95],
+  "menubar_style": "color",
+  "menubar_show_pct": true,
   "accounts": [
     {"id": "personal", "name": "Personal", "short": "P",
      "config_dir": "~/.claude", "enabled": true,
@@ -175,6 +183,7 @@ claude_usage/
   scheduler.py    background poll loop, per-account intervals
   state.py        view model: menubar title, dashboard payload, severity
   menubar.py      rumps app: title, notifications, status-item click handling
+  statusbar.py    status-item drawing: mini bars, SF Symbol marks, colour / mono styles
   window.py       NSPopover + WKWebView dashboard, JSON bridge, NSOpenPanel
   ui/dashboard.html   status table + account editor (no framework)
 app_main.py       top-level launcher for py2app

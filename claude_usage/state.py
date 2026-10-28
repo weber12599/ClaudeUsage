@@ -139,6 +139,23 @@ class Registry:
         ]
         return "  ·  ".join(frags) if frags else "Claude —"
 
+    def menubar_segments(self) -> List[dict]:
+        """Per enabled account, what the status bar draws (see statusbar.py)."""
+        segs = []
+        for a in self.cfg.accounts:
+            if not a.enabled or a.id not in self.states:
+                continue
+            st = self.states[a.id]
+            disp = st.display_snapshot()
+            segs.append({
+                "short": a.short or a.name[:1].upper(),
+                "severity": severity(st, self.cfg),
+                "stale": is_stale(st.snapshot, self.cfg),
+                "bars": [w.pct for w in usage_windows(disp).values()],  # 5h, 7d — or month alone
+                "pct": menubar_pct(disp),
+            })
+        return segs
+
     def dashboard_payload(self) -> dict:
         return {
             "version": __version__,
@@ -146,6 +163,8 @@ class Registry:
                 "poll_interval_seconds": self.cfg.poll_interval_seconds,
                 "stale_after_seconds": self.cfg.stale_after_seconds,
                 "notify_thresholds": self.cfg.notify_thresholds,
+                "menubar_style": self.cfg.menubar_style,
+                "menubar_show_pct": self.cfg.menubar_show_pct,
             },
             "accounts": [self._account_payload(a) for a in self.cfg.accounts],
             "generated_at": time.time(),

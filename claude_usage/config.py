@@ -72,6 +72,8 @@ class Config:
     poll_interval_seconds: int = 300
     stale_after_seconds: int = 1800
     notify_thresholds: List[int] = field(default_factory=lambda: [80, 95])
+    menubar_style: str = "color"       # "color" bars, or "mono" (template image, tinted like system icons)
+    menubar_show_pct: bool = True
     accounts: List[Account] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -80,6 +82,8 @@ class Config:
             "poll_interval_seconds": self.poll_interval_seconds,
             "stale_after_seconds": self.stale_after_seconds,
             "notify_thresholds": list(self.notify_thresholds),
+            "menubar_style": self.menubar_style,
+            "menubar_show_pct": self.menubar_show_pct,
             "accounts": [a.to_dict() for a in self.accounts],
         }
 
@@ -93,6 +97,8 @@ class Config:
             poll_interval_seconds=max(30, int(d.get("poll_interval_seconds") or 300)),
             stale_after_seconds=max(60, int(d.get("stale_after_seconds") or 1800)),
             notify_thresholds=sorted({int(t) for t in thresholds if 0 < int(t) <= 100}),
+            menubar_style="mono" if d.get("menubar_style") == "mono" else "color",
+            menubar_show_pct=bool(d.get("menubar_show_pct", True)),
             accounts=accounts,
         )
 
